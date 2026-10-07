@@ -1,0 +1,46 @@
+name: Build
+
+# Tests and builds userlib-cleaner.exe on every push; a tag like v0.1.0 publishes it as a release.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Vet and test
+        run: go vet ./... && go test ./...
+
+      - name: Build
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || version="dev-${GITHUB_SHA::7}"
+          go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$version" -o userlib-cleaner.exe .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: userlib-cleaner
+          path: userlib-cleaner.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" userlib-cleaner.exe --title "userlib-cleaner $GITHUB_REF_NAME" --generate-notes

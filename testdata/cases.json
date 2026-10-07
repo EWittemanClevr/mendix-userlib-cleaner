@@ -1,0 +1,107 @@
+{
+  "_comment": "Test cases for the library analysis, kept implementation-neutral (a JavaScript implementation runs them too). Add a case when you fix a bug.",
+  "java": [
+    {
+      "name": "imports, static, wildcard, qualified names; comments and strings ignored",
+      "src": "package mymodule.actions;\nimport org.apache.commons.io.FileUtils;\nimport static org.apache.commons.lang3.StringUtils.isBlank;\nimport org.jsoup.*;\nimport java.util.List;\n// import com.fake.Commented;\nclass X { String s = \"com.fake.InString\"; void f() { new org.apache.poi.ss.usermodel.WorkbookFactory(); com.mendix.core.Core.getLogger(\"\"); } }",
+      "types": ["com.mendix.core.Core", "org.apache.commons.io.FileUtils", "org.apache.commons.lang3.StringUtils", "org.apache.poi.ss.usermodel.WorkbookFactory"],
+      "packages": ["org.jsoup"],
+      "byName": ["com.fake.InString"]
+    },
+    {
+      "name": "class names in strings are by-name references, unless also used as a type",
+      "src": "class X { void f() { Class.forName(\"org.postgresql.Driver\"); String s = \"not.a.class\"; new org.x.y.Z(); String t = \"org.x.y.Z\"; } }",
+      "types": ["org.x.y.Z"],
+      "packages": [],
+      "byName": ["org.postgresql.Driver"]
+    },
+    {
+      "name": "javax.mail is a library, javax.crypto is the JDK",
+      "src": "import javax.mail.Session;\nimport javax.crypto.Cipher;\nclass X {}",
+      "types": ["javax.mail.Session"],
+      "packages": [],
+      "byName": []
+    }
+  ],
+  "analysis": [
+    {
+      "name": "older copy superseded, code/dependency/declared/orphan usage, stale RequiredLib",
+      "input": {
+        "jars": [
+          { "path": "vendorlib/lib-2.0.jar", "info": { "group": "g", "artifact": "lib", "version": "2.0", "classes": ["g.lib.Api"], "refPackages": ["g.dep"], "services": [] } },
+          { "path": "userlib/lib-1.0.jar", "info": { "group": "g", "artifact": "lib", "version": "1.0", "classes": ["g.lib.Api", "g.lib.Old"], "refPackages": [], "services": [] } },
+          { "path": "vendorlib/dep-1.0.jar", "info": { "group": "g", "artifact": "dep", "version": "1.0", "classes": ["g.dep.Helper"], "refPackages": [], "services": [] } },
+          { "path": "vendorlib/decl-1.0.jar", "info": { "group": "g", "artifact": "decl", "version": "1.0", "classes": ["g.decl.Thing"], "refPackages": [], "services": [] } },
+          { "path": "userlib/orphan.jar", "info": { "artifact": "orphan", "classes": ["o.Orphan"], "refPackages": [], "services": [] } }
+        ],
+        "javaFiles": [{ "path": "javasource/mymodule/actions/DoIt.java", "refs": { "types": ["g.lib.Api"], "packages": [], "byName": [] } }],
+        "jarDependencies": [{ "module": "OtherModule", "group": "g", "artifact": "decl", "version": "1.0" }],
+        "requiredLibs": [{ "jar": "userlib/lib-1.0.jar", "module": "MyModule", "marker": "userlib/lib-1.0.jar.MyModule.RequiredLib" }],
+        "moduleNames": ["MyModule", "OtherModule"]
+      },
+      "libs": {
+        "vendorlib/lib-2.0.jar": { "usage": "code", "role": "effective", "users": ["MyModule:DoIt"] },
+        "userlib/lib-1.0.jar": { "usage": "unused", "role": "superseded", "supersededBy": "vendorlib/lib-2.0.jar" },
+        "vendorlib/dep-1.0.jar": { "usage": "dependency", "role": "effective", "via": ["vendorlib/lib-2.0.jar"], "modules": ["MyModule"] },
+        "vendorlib/decl-1.0.jar": { "usage": "declared", "role": "effective" },
+        "userlib/orphan.jar": { "usage": "unused", "role": "effective" }
+      },
+      "plan": { "remove": ["userlib/lib-1.0.jar"], "keep": [["userlib/orphan.jar", "orphan"]], "vendorlib": [], "markers": { "userlib/lib-1.0.jar": ["userlib/lib-1.0.jar.MyModule.RequiredLib"] } },
+      "planWithOrphans": { "remove": ["userlib/lib-1.0.jar", "userlib/orphan.jar"] }
+    },
+    {
+      "name": "a superseded copy is used when code needs a class only it has",
+      "input": {
+        "jars": [
+          { "path": "vendorlib/lib-2.0.jar", "info": { "group": "g", "artifact": "lib", "version": "2.0", "classes": ["g.lib.Api"], "refPackages": [], "services": [] } },
+          { "path": "userlib/lib-1.0.jar", "info": { "group": "g", "artifact": "lib", "version": "1.0", "classes": ["g.lib.Api", "g.lib.Removed"], "refPackages": [], "services": [] } }
+        ],
+        "javaFiles": [{ "path": "javasource/m/Util.java", "refs": { "types": ["g.lib.Removed"], "packages": [], "byName": [] } }],
+        "moduleNames": ["M"]
+      },
+      "libs": {
+        "userlib/lib-1.0.jar": { "usage": "code", "role": "superseded" },
+        "vendorlib/lib-2.0.jar": { "usage": "unused", "role": "effective" }
+      },
+      "plan": { "remove": [], "keep": [], "vendorlib": ["vendorlib/lib-2.0.jar"] }
+    },
+    {
+      "name": "ServiceLoader provider and by-name use count as in use; vendorlib leftovers are only reported",
+      "input": {
+        "jars": [
+          { "path": "userlib/driver.jar", "info": { "group": "pg", "artifact": "postgresql", "version": "42.0", "classes": ["org.postgresql.Driver"], "refPackages": [], "services": ["java.sql.Driver"] } },
+          { "path": "userlib/byname.jar", "info": { "group": "n", "artifact": "byname", "version": "1.0", "classes": ["n.x.Impl"], "refPackages": [], "services": [] } },
+          { "path": "vendorlib/old-1.0.jar", "info": { "group": "v", "artifact": "old", "version": "1.0", "classes": ["v.Old"], "refPackages": [], "services": [] } },
+          { "path": "vendorlib/old-2.0.jar", "info": { "group": "v", "artifact": "old", "version": "2.0", "classes": ["v.Old"], "refPackages": [], "services": [] } }
+        ],
+        "javaFiles": [{ "path": "javasource/m/actions/A.java", "refs": { "types": ["v.Old"], "packages": [], "byName": ["n.x.Impl"] } }],
+        "moduleNames": ["M"]
+      },
+      "libs": {
+        "userlib/driver.jar": { "usage": "runtime", "role": "effective" },
+        "userlib/byname.jar": { "usage": "code", "role": "effective", "users": ["M:A:byName"] },
+        "vendorlib/old-1.0.jar": { "usage": "unused", "role": "superseded" }
+      },
+      "plan": { "remove": [], "keep": [], "vendorlib": ["vendorlib/old-1.0.jar"] }
+    },
+    {
+      "name": "same version twice: safe only when byte-identical; jdk15on and jdk18on are one library",
+      "input": {
+        "jars": [
+          { "path": "vendorlib/x-1.0.jar", "info": { "group": "g", "artifact": "x", "version": "1.0", "classes": ["g.X"], "refPackages": [], "services": [] } },
+          { "path": "userlib/x-1.0.jar", "info": { "group": "g", "artifact": "x", "version": "1.0", "classes": ["g.X"], "refPackages": [], "services": [] } },
+          { "path": "vendorlib/bcprov-jdk18on-1.84.jar", "info": { "group": "org.bouncycastle", "artifact": "bcprov-jdk18on", "version": "1.84", "classes": ["org.bouncycastle.B"], "refPackages": [], "services": [] } },
+          { "path": "userlib/bcprov-jdk15on-1.70.jar", "info": { "group": "org.bouncycastle", "artifact": "bcprov-jdk15on", "version": "1.70", "classes": ["org.bouncycastle.B"], "refPackages": [], "services": [] } }
+        ],
+        "javaFiles": [],
+        "moduleNames": []
+      },
+      "sha256": { "vendorlib/x-1.0.jar": "a", "userlib/x-1.0.jar": "b" },
+      "libs": {
+        "userlib/x-1.0.jar": { "usage": "unused", "role": "duplicate", "supersededBy": "vendorlib/x-1.0.jar" },
+        "userlib/bcprov-jdk15on-1.70.jar": { "usage": "unused", "role": "superseded", "supersededBy": "vendorlib/bcprov-jdk18on-1.84.jar" }
+      },
+      "plan": { "remove": ["userlib/bcprov-jdk15on-1.70.jar"], "keep": [["userlib/x-1.0.jar", "check"]], "vendorlib": ["vendorlib/x-1.0.jar", "vendorlib/bcprov-jdk18on-1.84.jar"] }
+    }
+  ]
+}
