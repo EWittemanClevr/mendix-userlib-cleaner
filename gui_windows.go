@@ -7,8 +7,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/faraga1/mendix-userlib-cleaner/internal/analysis"
-	"github.com/faraga1/mendix-userlib-cleaner/internal/app"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/analysis"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/app"
 	"github.com/tailscale/walk"
 	. "github.com/tailscale/walk/declarative"
 )

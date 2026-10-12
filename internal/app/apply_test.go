@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/faraga1/mendix-userlib-cleaner/internal/analysis"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/analysis"
 )
 
 func write(t *testing.T, path, content string) {

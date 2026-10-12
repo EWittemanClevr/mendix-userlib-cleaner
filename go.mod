@@ -1,4 +1,4 @@
-module github.com/faraga1/mendix-userlib-cleaner
+module github.com/EWittemanClevr/mendix-userlib-cleaner
 
 go 1.27.0
 

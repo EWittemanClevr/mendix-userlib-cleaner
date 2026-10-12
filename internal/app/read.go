@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/faraga1/mendix-userlib-cleaner/internal/analysis"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/analysis"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	_ "modernc.org/sqlite"
 )

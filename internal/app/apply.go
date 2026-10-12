@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/faraga1/mendix-userlib-cleaner/internal/analysis"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/analysis"
 )
 
 // The manifest records where every file came from, so --restore can put it back.

@@ -18,8 +18,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/faraga1/mendix-userlib-cleaner/internal/analysis"
-	"github.com/faraga1/mendix-userlib-cleaner/internal/app"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/analysis"
+	"github.com/EWittemanClevr/mendix-userlib-cleaner/internal/app"
 )
 
 var version = "dev" // set at build time: -ldflags "-X main.version=…"
